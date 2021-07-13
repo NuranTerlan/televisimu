@@ -16,6 +16,9 @@ namespace Client
 
             var ipAddress = (await Dns.GetHostEntryAsync("localhost")).AddressList[0];
 
+            // wait a little bit to guarantee that server is started
+            // otherwise you'll get an exception about: an existing connection was forcibly closed by remote host (UDP-server)
+            await Task.Delay(200);
             var portRead = AskForPort();
             
             var isPortInCorrectFormat = int.TryParse(portRead, out var port);
@@ -49,7 +52,7 @@ namespace Client
             Console.Write("RECEIVED: ");
             Console.ResetColor();
             Console.Write(content.PadRight(25));
-            Console.WriteLine(DateTime.UtcNow.ToString("yyyy-M-d dddd HH-mm-ss.fff"));
+            Console.WriteLine(DateTime.UtcNow.ToLocalTime().ToString("yyyy-M-d HH-mm-ss.fff"));
         }
 
         private static string AskForPort()
