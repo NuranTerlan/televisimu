@@ -7,7 +7,7 @@ namespace Server
     {
         static async Task Main(string[] args)
         {
-            Console.Title = "Udp Server";
+            Console.Title = "UDP-Server";
 
             var server = new UdpServer(5005);
             var sentWords = new string[]
