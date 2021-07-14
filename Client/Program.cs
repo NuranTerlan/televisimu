@@ -12,29 +12,31 @@ namespace Client
         static async Task Main(string[] args)
         {
             var id = Guid.NewGuid();
-            Console.Title = "Udp Client (client@" + id + ')';
+            Console.Title = "UDP-Client (client@" + id + ')';
 
-            var ipAddress = (await Dns.GetHostEntryAsync("localhost")).AddressList[0];
+            var ipAddress = (await Dns.GetHostEntryAsync("localhost")).AddressList[1];
 
             // wait a little bit to guarantee that server is started
             // otherwise you'll get an exception about: an existing connection was forcibly closed by remote host (UDP-server)
-            await Task.Delay(200);
-            var portRead = AskForPort();
-            
-            var isPortInCorrectFormat = int.TryParse(portRead, out var port);
-            if (!isPortInCorrectFormat)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Port is incorrect format!! (" + portRead + ')');
-                Console.ResetColor();
-            }
+            await Task.Delay(TimeSpan.FromSeconds(2));
 
-            var localEndPoint = new IPEndPoint(ipAddress, port);
-            var client = new UdpClient(localEndPoint);
+            // var portRead = AskForPort();
+            // var isPortInCorrectFormat = int.TryParse(portRead, out var port);
+            // if (!isPortInCorrectFormat)
+            // {
+            //     Console.ForegroundColor = ConsoleColor.Red;
+            //     Console.WriteLine("Port is incorrect format!! (" + portRead + ')');
+            //     Console.ResetColor();
+            // }
+
+            // var localEndPoint = new IPEndPoint(ipAddress, port);
+            var client = new UdpClient(0);
+            var localEndPoint = (IPEndPoint) client.Client.LocalEndPoint;
+            InformSuccessfulStartingOnConsole($"UDP-Client client@{id} is started on: {localEndPoint}");
             var remoteEndPoint = new IPEndPoint(ipAddress, 5005);
             client.Connect(remoteEndPoint);
 
-            var msgBytes = Encoding.ASCII.GetBytes("Hey server, it's client@" + id);
+            var msgBytes = Encoding.ASCII.GetBytes("Hey server, it's client@" + id + " | from " + localEndPoint);
             await client.SendAsync(msgBytes, msgBytes.Length);
 
             while (true)
@@ -44,6 +46,13 @@ namespace Client
                 var message = Encoding.ASCII.GetString(buffer, 0, buffer.Length);
                 WriteReceived(message);
             }
+        }
+
+        private static void InformSuccessfulStartingOnConsole(string content)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(content + '\n');
+            Console.ResetColor();
         }
 
         private static void WriteReceived(string content)
