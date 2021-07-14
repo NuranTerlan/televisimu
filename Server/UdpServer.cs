@@ -21,11 +21,13 @@ namespace Server
 
         public UdpServer(int port)
         {
-            IpAddress = _hostEntry.AddressList[0];
+            IpAddress = _hostEntry.AddressList[1];
             LocalEndPoint = new IPEndPoint(IpAddress, port);
             UdpSocket = new UdpClient(LocalEndPoint);
             ClientEndPoints = new ConcurrentBag<IPEndPoint>();
 
+            InformSuccessfulStartingOnConsole("Server is running on: " + LocalEndPoint);
+            
             Task.Run(async () => await AcceptRequestingClient());
         }
 
@@ -67,6 +69,13 @@ namespace Server
             });
 
 
+        }
+        
+        private static void InformSuccessfulStartingOnConsole(string content)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(content + '\n');
+            Console.ResetColor();
         }
     }
 }
