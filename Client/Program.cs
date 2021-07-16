@@ -9,12 +9,19 @@ namespace Client
 {
     class Program
     {
+        private static readonly Guid Id = Guid.NewGuid();
+        private static readonly IPAddress IpAddress = Dns.GetHostEntry("localhost").AddressList[1];
+        private static readonly IPEndPoint ServerEndPoint = new IPEndPoint(IpAddress, 5005);
+        private static readonly UdpClient Client = new UdpClient(0);
+        private static readonly IPEndPoint LocalEndPoint = (IPEndPoint) Client.Client.LocalEndPoint;
+
+        public Program()
+        {
+        }
+        
         static async Task Main(string[] args)
         {
-            var id = Guid.NewGuid();
-            Console.Title = "UDP-Client (client@" + id + ')';
-
-            var ipAddress = (await Dns.GetHostEntryAsync("localhost")).AddressList[1];
+            Console.Title = "UDP-Client (client@" + Id + ')';
 
             // wait a little bit to guarantee that server is started
             // otherwise you'll get an exception about: an existing connection was forcibly closed by remote host (UDP-server)
@@ -29,19 +36,17 @@ namespace Client
             //     Console.ResetColor();
             // }
 
-            // var localEndPoint = new IPEndPoint(ipAddress, port);
-            var client = new UdpClient(0);
-            var localEndPoint = (IPEndPoint) client.Client.LocalEndPoint;
-            InformSuccessfulStartingOnConsole($"UDP-Client client@{id} is started on: {localEndPoint}");
-            var remoteEndPoint = new IPEndPoint(ipAddress, 5005);
-            client.Connect(remoteEndPoint);
+            InformSuccessfulStartingOnConsole($"UDP-Client client@{Id} is started on: {LocalEndPoint}");
+            Client.Connect(ServerEndPoint);
 
-            var msgBytes = Encoding.ASCII.GetBytes("Hey server, it's client@" + id + " | from " + localEndPoint);
-            await client.SendAsync(msgBytes, msgBytes.Length);
-
+            var msgBytes = Encoding.ASCII.GetBytes("Hey server, it's client@" + Id + " | from " + LocalEndPoint);
+            await Client.SendAsync(msgBytes, msgBytes.Length);
+            
+            Task.Run(async () => await WaitForExitKey());
+            
             while (true)
             {
-                var receivedDgram = await client.ReceiveAsync();
+                var receivedDgram = await Client.ReceiveAsync();
                 var buffer = receivedDgram.Buffer;
                 var message = Encoding.ASCII.GetString(buffer, 0, buffer.Length);
                 WriteReceived(message);
@@ -71,6 +76,33 @@ namespace Client
             Console.WriteLine();
 
             return input;
+        }
+
+        private static async Task WaitForExitKey()
+        {
+            if (Console.ReadKey().Key == ConsoleKey.Escape)
+            {
+                var successful = await SendExitRequestToServer();
+                if (successful)
+                {
+                    Environment.Exit(0);
+                }
+            }
+        }
+
+        private static async Task<bool> SendExitRequestToServer()
+        {
+            try
+            {
+                var msgBytes = Encoding.ASCII.GetBytes("client@" + Id + " from " + LocalEndPoint + " is out..");
+                await Client.SendAsync(msgBytes, msgBytes.Length);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Can't send exit request to the server. Error content: " + e.Message);
+                return false;
+            }
         }
     }
 }
