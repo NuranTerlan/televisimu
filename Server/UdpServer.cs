@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,7 +16,7 @@ namespace Server
         public IPAddress IpAddress { get; }
         public IPEndPoint LocalEndPoint { get; }
         public UdpClient UdpSocket { get; }
-        public ConcurrentBag<IPEndPoint> ClientEndPoints { get; }
+        public HashSet<IPEndPoint> ClientEndPoints { get; }
 
         private readonly IPHostEntry _hostEntry = Dns.GetHostEntry("localhost");
 
@@ -24,7 +25,7 @@ namespace Server
             IpAddress = _hostEntry.AddressList[1];
             LocalEndPoint = new IPEndPoint(IpAddress, port);
             UdpSocket = new UdpClient(LocalEndPoint);
-            ClientEndPoints = new ConcurrentBag<IPEndPoint>();
+            ClientEndPoints = new HashSet<IPEndPoint>();
 
             InformSuccessfulStartingOnConsole("Server is running on: " + LocalEndPoint);
             
@@ -37,8 +38,16 @@ namespace Server
             {
                 var received = await UdpSocket.ReceiveAsync();
                 var buffer = received.Buffer;
-                Console.WriteLine(Encoding.ASCII.GetString(buffer, 0, buffer.Length));
-                ClientEndPoints.Add(received.RemoteEndPoint);
+                var remoteEndPoint = received.RemoteEndPoint;
+                var message = Encoding.ASCII.GetString(buffer, 0, buffer.Length);
+                Console.WriteLine(message);
+                if (Regex.IsMatch(message, "out"))
+                {
+                    ClientEndPoints.Remove(remoteEndPoint);
+                    continue;
+                }
+                
+                ClientEndPoints.Add(remoteEndPoint);
             }
         }
 
